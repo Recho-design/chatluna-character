@@ -319,13 +319,24 @@ async function handleStickerSending(
     stickerService: StickerService
 ): Promise<void> {
     const random = new Random()
-    if (Math.random() < config.sendStickerProbability) {
-        const sticker = await stickerService.randomStickByType(
-            parsedResponse.sticker
-        )
-        await sleep(random.int(500, 2000))
-        await session.send(sticker)
+    if (!parsedResponse.hasStickerTag) {
+        return
     }
+
+    if (Math.random() >= config.sendStickerProbability) {
+        return
+    }
+
+    const sticker = await stickerService.randomStickByType(
+        parsedResponse.sticker
+    )
+
+    if (!sticker) {
+        return
+    }
+
+    await sleep(random.int(500, 2000))
+    await session.send(sticker)
 }
 
 async function handleModelResponse(

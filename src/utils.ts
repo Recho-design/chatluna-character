@@ -149,6 +149,9 @@ export function processTextMatches(
     const currentElements: Element[] = []
     let parsedMessage = ''
     let messageCount = 0
+    const stickerTagPattern =
+        /<(?:sticker)>[\s\S]*?<\/(?:sticker)>/i
+    let hasStickerTag = stickerTagPattern.test(rawMessage)
     const tokens = textMatchLexer(rawMessage)
 
     if (tokens.length === 0) {
@@ -156,7 +159,8 @@ export function processTextMatches(
             currentElements: markdownRender
                 ? transform(rawMessage)
                 : [h('text', { content: rawMessage })],
-            parsedMessage: rawMessage
+            parsedMessage: rawMessage,
+            hasStickerTag
         }
     }
 
@@ -218,7 +222,7 @@ export function processTextMatches(
                 )
                 break
             case 'sticker':
-                currentElements.push(h('message', [h.image(token.content)]))
+                hasStickerTag = true
                 break
             case 'img':
                 currentElements.push(
@@ -242,7 +246,7 @@ export function processTextMatches(
         }
     }
 
-    return { currentElements, parsedMessage }
+    return { currentElements, parsedMessage, hasStickerTag }
 }
 
 function textMatchLexer(input: string): TextMatch[] {
@@ -437,11 +441,17 @@ export async function parseResponse(
         const { rawMessage, messageType, status, sticker } =
             parseMessageContent(response)
 
-        const { currentElements, parsedMessage } = processTextMatches(
+        const {
+            currentElements,
+            parsedMessage,
+            hasStickerTag
+        } = processTextMatches(
             rawMessage,
             useAt,
             config?.markdownRender ?? true
         )
+
+        const detectedStickerTag = hasStickerTag || Boolean(sticker)
 
         const resultElements = await processElements(
             currentElements,
@@ -454,7 +464,8 @@ export async function parseResponse(
             rawMessage: parsedMessage,
             status,
             sticker,
-            messageType
+            messageType,
+            hasStickerTag: detectedStickerTag
         }
     } catch (e) {
         logger?.error(e)

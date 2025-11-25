@@ -187,21 +187,19 @@ export class MessageCollector extends Service {
         const maxMessageSize = this._config.maxMessages
         const groupArray = this._messages[groupId] ? this._messages[groupId] : []
 
-        const content =
-            Array.isArray(elements[0])
-                ? (
-                      elements as h[][]
-                  )
-                      .map((segment) =>
-                          mapElementToString(session, session.content, segment)
-                      )
-                      .filter((text) => text.length > 0)
-                      .join(',')
-                : mapElementToString(
+        const segments = Array.isArray(elements[0])
+            ? (elements as h[][]).map((segment) =>
+                  mapElementToString(session, session.content, segment)
+              )
+            : [
+                  mapElementToString(
                       session,
                       session.content,
                       elements as h[]
                   )
+              ]
+
+        const content = segments.filter((text) => text.length > 0).join(',')
 
         if (content.length < 1) {
             await this._unlock(session)
@@ -234,6 +232,13 @@ export class MessageCollector extends Service {
             groupArray.shift()
         }
 
+        const segmentPreview = segments
+            .filter((text) => text.length > 0)
+            .map((text, index) => `段${index + 1}: ${text}`)
+            .join(' || ')
+        console.log(
+            `[chatluna-character] 机器人消息格式化完成（群组 ${groupId}），${segments.length > 1 ? '多段合并' : '单段'}结果：${segmentPreview}`
+        )
         this._messages[groupId] = groupArray
         await this._saveGroupToDatabase(groupId)
 
@@ -301,6 +306,9 @@ export class MessageCollector extends Service {
 
         await this._processImages(groupArray, config)
 
+        console.log(
+            `[chatluna-character] 用户消息格式化完成（群组 ${groupId}）：${content}`
+        )
         this._messages[groupId] = groupArray
         await this._saveGroupToDatabase(groupId)
 
@@ -386,6 +394,7 @@ export class MessageCollector extends Service {
 
     private async _loadFromDatabase() {
         try {
+            console.log('[chatluna-character] 开始从数据库加载历史消息')
             const rows = await this.ctx.database.get(
                 'chatluna_character.history',
                 {},
@@ -393,6 +402,9 @@ export class MessageCollector extends Service {
             )
 
             const maxMessageSize = this._config.maxMessages
+            console.log(
+                `[chatluna-character] 读取到 ${rows.length} 个群组历史记录`
+            )
 
             for (const row of rows) {
                 try {
@@ -405,16 +417,19 @@ export class MessageCollector extends Service {
                     }
 
                     this._messages[row.groupId] = groupArray
+                    console.log(
+                        `[chatluna-character] 群组 ${row.groupId} 历史消息已加载，条数：${groupArray.length}`
+                    )
                 } catch (e) {
-                    this.logger?.warn?.(
-                        '解析数据库中的聊天记录失败，已忽略一条记录',
+                    console.warn(
+                        `[chatluna-character] 解析群组 ${row.groupId} 历史消息失败，已跳过：`,
                         e
                     )
                 }
             }
         } catch (e) {
-            this.logger?.warn?.(
-                '从数据库读取聊天记录失败，将从空记录开始',
+            console.warn(
+                '[chatluna-character] 从数据库加载历史消息失败，已回退为空历史：',
                 e
             )
             this._messages = {}
@@ -425,6 +440,9 @@ export class MessageCollector extends Service {
         try {
             const groupArray = this._messages[groupId] ?? []
 
+            console.log(
+                `[chatluna-character] 正在保存群组 ${groupId} 历史消息到数据库，条数：${groupArray.length}`
+            )
             await this.ctx.database.upsert('chatluna_character.history', [
                 {
                     groupId,
@@ -432,8 +450,8 @@ export class MessageCollector extends Service {
                 }
             ])
         } catch (e) {
-            this.logger?.warn?.(
-                `保存群 ${groupId} 的聊天记录到数据库失败`,
+            console.warn(
+                `[chatluna-character] 保存群组 ${groupId} 历史消息到数据库失败：`,
                 e
             )
         }
