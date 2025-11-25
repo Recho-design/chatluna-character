@@ -618,13 +618,8 @@ function stripMetaTags(input: string) {
     result = result.replace(/<at[^>]*>[\s\S]*?<\/at>/g, '')
     result = result.replace(/<face[^>]*>[\s\S]*?<\/face>/g, '')
 
-    // 为相邻 message 标签插入逗号，保留多条信息的分隔
-    result = result.replace(/<\/message>\s*<message[^>]*>/g, ',')
-
     // 删除剩余的 message/emo 等包装标签，只保留内部文本
     result = result.replace(/<\/?(message|emo)[^>]*>/g, '')
-
-    result = result.replace(/\r?\n+/g, ',')
 
     return result.trim()
 }
