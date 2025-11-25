@@ -7,6 +7,7 @@ export declare class MessageCollector extends Service {
     readonly ctx: Context;
     _config: Config;
     private _messages;
+    private _hasHistory;
     private _eventEmitter;
     private _filters;
     private _groupLocks;
@@ -30,7 +31,7 @@ export declare class MessageCollector extends Service {
     private _lock;
     private _unlock;
     clear(groupId?: string): Promise<void>;
-    broadcastOnBot(session: Session, elements: h[]): Promise<void>;
+    broadcastOnBot(session: Session, elements: h[] | h[][]): Promise<void>;
     broadcast(session: Session): Promise<boolean>;
     private _processImages;
     private _getImageSize;

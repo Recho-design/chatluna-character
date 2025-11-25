@@ -10,6 +10,7 @@ export declare function processElements(elements: Element[], voiceRender?: (elem
 export declare function processTextMatches(rawMessage: string, useAt?: boolean, markdownRender?: boolean): {
     currentElements: Element[];
     parsedMessage: string;
+    hasStickerTag: boolean;
 };
 export declare function parseResponse(response: string, useAt?: boolean, voiceRender?: (element: h) => Promise<h[]>, config?: Config): Promise<{
     elements: Element[][];
@@ -17,6 +18,7 @@ export declare function parseResponse(response: string, useAt?: boolean, voiceRe
     status: string;
     sticker: string;
     messageType: string;
+    hasStickerTag: boolean;
 }>;
 export declare function splitSentence(text: string): string[];
 export declare function matchAt(str: string): {
