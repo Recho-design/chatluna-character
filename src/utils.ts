@@ -148,6 +148,7 @@ export function processTextMatches(
 ) {
     const currentElements: Element[] = []
     let parsedMessage = ''
+    let messageCount = 0
     const tokens = textMatchLexer(rawMessage)
 
     if (tokens.length === 0) {
@@ -184,6 +185,9 @@ export function processTextMatches(
                 break
             case 'pre':
             case 'message': {
+                if (messageCount > 0) {
+                    parsedMessage += '\n'
+                }
                 parsedMessage += token.content
                 const children = token.children
                     ? processTextMatches(token.content, useAt, markdownRender)
@@ -191,6 +195,7 @@ export function processTextMatches(
                     : [h('text', { span: true, content: token.content })]
 
                 currentElements.push(h('message', { span: true }, ...children))
+                messageCount++
                 break
             }
             case 'face': {
