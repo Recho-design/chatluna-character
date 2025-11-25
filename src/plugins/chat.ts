@@ -139,7 +139,7 @@ async function prepareMessages(
     const formattedSystemPrompt = await currentPreset.system.format(
         {
             time: '',
-            stickers: '',
+            stickers: JSON.stringify(stickerService.getAllStickTypes()),
             status: ''
         },
         session.app.chatluna.promptRenderer,
