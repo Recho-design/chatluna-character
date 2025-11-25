@@ -1,0 +1,60 @@
+{
+  "name": "koishi-plugin-chatluna-character-fork",
+  "description": "开发中：伪装群友",
+  "version": "0.0.1",
+  "main": "lib/index.cjs",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "dist"
+  ],
+  "license": "MIT",
+  "scripts": {
+    "prebuild": "tsc -b --clean",
+    "build": "tsc -b && esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 --external:koishi --external:@koishijs/* --external:koishi-plugin-chatluna --external:koishi-plugin-chatluna/* --outfile=lib/index.cjs",
+    "watch": "tsc -b -w"
+  },
+  "keywords": [
+    "chatbot",
+    "koishi",
+    "plugin"
+  ],
+  "devDependencies": {
+    "@koishijs/client": "^5.30.4",
+    "koishi-plugin-chatluna": "^1.3.0-alpha.71",
+    "esbuild": "^0.23.1",
+    "typescript": "^5.6.2"
+  },
+  "peerDependencies": {
+    "@koishijs/plugin-console": "^5.30.4",
+    "koishi": "^4.18.7",
+    "koishi-plugin-chatluna": "^1.3.0-alpha.71"
+  },
+  "dependencies": {
+    "@langchain/core": "0.3.62",
+    "he": "^1.2.0",
+    "js-yaml": "^4.1.0",
+    "marked": "^15.0.12"
+  },
+  "resolutions": {
+    "@langchain/core": "0.3.62",
+    "js-tiktoken": "npm:@dingyi222666/js-tiktoken@^1.0.21"
+  },
+  "overrides": {
+    "@langchain/core": "0.3.62",
+    "js-tiktoken": "npm:@dingyi222666/js-tiktoken@^1.0.21"
+  },
+  "pnpm": {
+    "overrides": {
+      "@langchain/core": "0.3.62",
+      "js-tiktoken": "npm:@dingyi222666/js-tiktoken@^1.0.21"
+    }
+  },
+  "koishi": {
+    "services": {
+      "optional": [
+        "chatluna"
+      ]
+    }
+  }
+}
