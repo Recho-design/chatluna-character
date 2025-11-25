@@ -232,13 +232,6 @@ export class MessageCollector extends Service {
             groupArray.shift()
         }
 
-        const segmentPreview = segments
-            .filter((text) => text.length > 0)
-            .map((text, index) => `段${index + 1}: ${text}`)
-            .join(' || ')
-        console.log(
-            `[chatluna-character] 机器人消息格式化完成（群组 ${groupId}），${segments.length > 1 ? '多段合并' : '单段'}结果：${segmentPreview}`
-        )
         this._messages[groupId] = groupArray
         await this._saveGroupToDatabase(groupId)
 
@@ -306,9 +299,6 @@ export class MessageCollector extends Service {
 
         await this._processImages(groupArray, config)
 
-        console.log(
-            `[chatluna-character] 用户消息格式化完成（群组 ${groupId}）：${content}`
-        )
         this._messages[groupId] = groupArray
         await this._saveGroupToDatabase(groupId)
 
@@ -440,9 +430,6 @@ export class MessageCollector extends Service {
         try {
             const groupArray = this._messages[groupId] ?? []
 
-            console.log(
-                `[chatluna-character] 正在保存群组 ${groupId} 历史消息到数据库，条数：${groupArray.length}`
-            )
             await this.ctx.database.upsert('chatluna_character.history', [
                 {
                     groupId,
