@@ -370,10 +370,7 @@ async function handleModelResponse(
     await handleStickerSending(session, config, parsedResponse, stickerService)
 
     service.mute(session, config.coolDownTime * 1000)
-    await service.broadcastOnBot(
-        session,
-        parsedResponse.elements.flat()
-    )
+    await service.broadcastOnBot(session, parsedResponse.elements)
 }
 
 export async function apply(ctx: Context, config: Config) {

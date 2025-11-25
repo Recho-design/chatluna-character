@@ -51,6 +51,17 @@ export class StickerService {
             }
         }
 
+        const availableTypes = Object.keys(this._stickers)
+        if (availableTypes.length === 0) {
+            this._ctx.logger.info(
+                '当前未检测到可用表情包类型，请检查 data/chathub/character/sticker 目录'
+            )
+        } else {
+            this._ctx.logger.info(
+                `可用表情包类型：${availableTypes.join(', ')}`
+            )
+        }
+
         if (Object.keys(this._stickers).length > 0) {
             this._ctx.logger.warn(
                 'Sticker Service is deprecated. In future, we will make the new sticker system.'

@@ -176,7 +176,7 @@ export class MessageCollector extends Service {
         }
     }
 
-    async broadcastOnBot(session: Session, elements: h[]) {
+    async broadcastOnBot(session: Session, elements: h[] | h[][]) {
         if (session.isDirect) {
             return
         }
@@ -185,11 +185,23 @@ export class MessageCollector extends Service {
 
         const groupId = session.guildId
         const maxMessageSize = this._config.maxMessages
-        const groupArray = this._messages[groupId]
-            ? this._messages[groupId]
-            : []
+        const groupArray = this._messages[groupId] ? this._messages[groupId] : []
 
-        const content = mapElementToString(session, session.content, elements)
+        const content =
+            Array.isArray(elements[0])
+                ? (
+                      elements as h[][]
+                  )
+                      .map((segment) =>
+                          mapElementToString(session, session.content, segment)
+                      )
+                      .filter((text) => text.length > 0)
+                      .join(',')
+                : mapElementToString(
+                      session,
+                      session.content,
+                      elements as h[]
+                  )
 
         if (content.length < 1) {
             await this._unlock(session)
