@@ -5,6 +5,26 @@ import { plugins } from './plugin.js'
 import { MessageCollector } from './service/message.js'
 import { GuildConfig } from './types.js'
 
+function addMessageContent(message: { content: unknown }, content: string) {
+    if (typeof message.content === 'string') {
+        message.content += content
+        return
+    }
+
+    const current =
+        typeof message.content === 'string' || message.content == null
+            ? []
+            : (message.content as unknown[])
+
+    message.content = [
+        ...current,
+        {
+            type: 'text',
+            text: content
+        }
+    ]
+}
+
 export function apply(ctx: Context, config: Config) {
     ctx.plugin(MessageCollector, config)
 
@@ -14,6 +34,33 @@ export function apply(ctx: Context, config: Config) {
                 ctx.on('ready', async () => {
                     await ctx.chatluna_character.stickerService.init()
                     await ctx.chatluna_character.preset.init()
+                    if (ctx.chatluna?.messageTransformer) {
+                        ctx.chatluna.messageTransformer.replace(
+                            'face',
+                            async (session, element, message, model) => {
+                                const id = element.attrs.id ?? ''
+                                const name = element.attrs.name ?? ''
+                                const faceText = `[face:${id}:${name}]`
+
+                                addMessageContent(message as any, faceText)
+
+                                if (element.children?.length) {
+                                    await ctx.chatluna.messageTransformer.transform(
+                                        session,
+                                        element.children,
+                                        model,
+                                        message,
+                                        {
+                                            quote: false,
+                                            includeQuoteReply: true
+                                        }
+                                    )
+                                }
+
+                                return true
+                            }
+                        )
+                    }
                     await plugins(ctx, config)
                 })
             },
