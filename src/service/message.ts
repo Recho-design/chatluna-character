@@ -480,10 +480,34 @@ export class MessageCollector extends Service {
     try {
       const groupArray = this._messages[groupId] ?? []
 
+      // 为了避免在数据库中存储体积巨大的 base64 图片数据，
+      // 持久化时会过滤掉所有以 data:image/...;base64, 开头的图片地址。
+      // 这样可以在内存中继续保留完整图片信息供多模态模型使用，
+      // 但数据库中只保存精简后的文本和非 base64 图片元数据。
+      const sanitizedGroupArray = groupArray.map((message) => {
+        const cloned: Message = { ...message }
+
+        if (cloned.images && cloned.images.length > 0) {
+          const filteredImages = cloned.images.filter((image) => {
+            if (!image?.url) return false
+            // 过滤掉 base64 图片地址
+            return !/^data:image\/[a-z]+;base64,/i.test(image.url)
+          })
+
+          if (filteredImages.length > 0) {
+            cloned.images = filteredImages
+          } else {
+            delete cloned.images
+          }
+        }
+
+        return cloned
+      })
+
       await this.ctx.database.upsert('chatluna_character.history', [
         {
           groupId,
-          payload: JSON.stringify(groupArray)
+          payload: JSON.stringify(sanitizedGroupArray)
         }
       ])
     } catch (e) {
