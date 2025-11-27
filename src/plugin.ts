@@ -1,11 +1,11 @@
 import { Context } from 'koishi'
 import { Config } from '.'
 // import start
-import { apply as chat } from './plugins/chat.js'
-import { apply as commands } from './plugins/commands.js'
-import { apply as config } from './plugins/config.js'
-import { apply as filter } from './plugins/filter.js'
-import { apply as interception } from './plugins/interception.js' // import end
+import { apply as chat } from './plugins/chat'
+import { apply as commands } from './plugins/commands'
+import { apply as config } from './plugins/config'
+import { apply as filter } from './plugins/filter'
+import { apply as interception } from './plugins/interception' // import end
 
 export async function plugins(ctx: Context, parent: Config) {
     type Command = (ctx: Context, config: Config) => PromiseLike<void> | void

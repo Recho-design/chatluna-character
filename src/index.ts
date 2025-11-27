@@ -1,9 +1,9 @@
 /* eslint-disable max-len */
 import { Context, Schema } from 'koishi'
 import { ChatLunaPlugin } from 'koishi-plugin-chatluna/services/chat'
-import { plugins } from './plugin.js'
-import { MessageCollector } from './service/message.js'
-import { GuildConfig } from './types.js'
+import { plugins } from './plugin'
+import { MessageCollector } from './service/message'
+import { GuildConfig } from './types'
 
 function addMessageContent(message: { content: unknown }, content: string) {
     if (typeof message.content === 'string') {

@@ -1,6 +1,6 @@
 import { Context, Session, Time } from 'koishi'
 import { Config } from '..'
-import { ActivityScore, GroupInfo, PresetTemplate } from '../types.js'
+import { ActivityScore, GroupInfo, PresetTemplate } from '../types'
 
 export const groupInfos: Record<string, GroupInfo> = {}
 

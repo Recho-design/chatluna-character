@@ -1,6 +1,6 @@
 import { ChatLunaChatModel } from 'koishi-plugin-chatluna/llm-core/platform/model'
 import { Config } from '.'
-import { ChatLunaChain, Message } from './types.js'
+import { ChatLunaChain, Message } from './types'
 import {
     AIMessageChunk,
     BaseMessage,

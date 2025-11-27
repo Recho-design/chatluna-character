@@ -7,7 +7,7 @@ import {
     ChatLunaErrorCode
 } from 'koishi-plugin-chatluna/utils/error'
 import path from 'path'
-import { ChatLunaCharacterPromptTemplate, PresetTemplate } from './types.js'
+import { ChatLunaCharacterPromptTemplate, PresetTemplate } from './types'
 import { watch } from 'fs'
 import { ChatLunaService } from 'koishi-plugin-chatluna/services/chat'
 

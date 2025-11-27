@@ -7,7 +7,7 @@ import { Context, h, Logger, Random, Session, sleep } from 'koishi'
 import { ChatLunaChatModel } from 'koishi-plugin-chatluna/llm-core/platform/model'
 import { parseRawModelName } from 'koishi-plugin-chatluna/llm-core/utils/count_tokens'
 import { Config } from '..'
-import { ChatLunaChain, GroupTemp, Message, PresetTemplate } from '../types.js'
+import { ChatLunaChain, GroupTemp, Message, PresetTemplate } from '../types'
 import {
     createChatLunaChain,
     formatCompletionMessages,
@@ -16,9 +16,9 @@ import {
     isEmoticonStatement,
     parseResponse,
     setLogger
-} from '../utils.js'
-import { Preset } from '../preset.js'
-import { StickerService } from '../service/sticker.js'
+} from '../utils'
+import { Preset } from '../preset'
+import { StickerService } from '../service/sticker'
 import type {} from 'koishi-plugin-chatluna/services/chat'
 import { getMessageContent } from 'koishi-plugin-chatluna/utils/string'
 import { ComputedRef } from 'koishi-plugin-chatluna'

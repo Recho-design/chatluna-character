@@ -3,9 +3,9 @@ import EventEmitter from 'events'
 import { Context, h, Logger, Service, Session } from 'koishi'
 import { createLogger } from 'koishi-plugin-chatluna/utils/logger'
 import { Config } from '..'
-import { Preset } from '../preset.js'
-import { GroupTemp, Message } from '../types.js'
-import { StickerService } from './sticker.js'
+import { Preset } from '../preset'
+import { GroupTemp, Message } from '../types'
+import { StickerService } from './sticker'
 import { isMessageContentImageUrl } from 'koishi-plugin-chatluna/utils/string'
 
 let logger: Logger
