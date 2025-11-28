@@ -1,6 +1,6 @@
 import { Context, Schema } from 'koishi';
 import { ChatLunaPlugin } from 'koishi-plugin-chatluna/services/chat';
-import { GuildConfig } from './types.js';
+import { GuildConfig } from './types';
 export declare function apply(ctx: Context, config: Config): void;
 export declare const inject: {
     required: string[];
@@ -52,6 +52,7 @@ export interface Config extends ChatLunaPlugin.Config {
     splitSentence: boolean;
     isAt: boolean;
     respondEveryMessage: boolean;
+    historyStripPattern: string;
 }
 export declare const Config: Schema<Config>;
 export declare const name = "chatluna-character";

@@ -1,6 +1,6 @@
 import { ChatLunaChatModel } from 'koishi-plugin-chatluna/llm-core/platform/model';
 import { Config } from '.';
-import { ChatLunaChain, Message } from './types.js';
+import { ChatLunaChain, Message } from './types';
 import { BaseMessage } from '@langchain/core/messages';
 import { Context, Element, h, Logger, Session } from 'koishi';
 import { ComputedRef } from 'koishi-plugin-chatluna';

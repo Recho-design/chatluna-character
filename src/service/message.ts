@@ -1,6 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import EventEmitter from 'events'
 import { Context, h, Logger, Service, Session } from 'koishi'
+import { Buffer } from 'buffer'
 import { createLogger } from 'koishi-plugin-chatluna/utils/logger'
 import { Config } from '..'
 import { Preset } from '../preset'
@@ -555,9 +556,16 @@ function mapElementToString(session: Session, content: string, elements: h[]) {
         )
       }
     } else if (element.type === 'face') {
-      filteredBuffer.push(
-        `<face name='${element.attrs.name}'>${element.attrs.id}</face>`
-      )
+      const rawName = element.attrs.name as string | undefined
+      const rawId = element.attrs.id as string | number | undefined
+      const name =
+        rawName && rawName !== '__'
+          ? rawName
+          : rawId != null
+            ? String(rawId)
+            : '表情'
+
+      filteredBuffer.push(`[表情:${name}]`)
     }
   }
 
@@ -582,23 +590,78 @@ async function getImages(ctx: Context, model: string, session: Session) {
 
   const images = mergedMessage.content.filter(isMessageContentImageUrl)
 
-  if (!images || images.length < 1) {
+  const result: {
+    url: string
+    hash: string
+    formatted: string
+  }[] = []
+
+  if (images && images.length > 0) {
+    for (const image of images) {
+      const url =
+        typeof image.image_url === 'string'
+          ? image.image_url
+          : image.image_url.url
+
+      const hash: string =
+        typeof image.image_url !== 'string' ? image.image_url['hash'] : ''
+
+      const formatted = hash ? `[image:${hash}]` : `<sticker>${url}</sticker>`
+
+      result.push({ url, hash, formatted })
+    }
+  }
+
+  // 额外处理 Discord 的表情，将其转换为静态图片（base64），并且忽略 gif 表情
+  if (session.platform === 'discord' && Array.isArray(session.elements)) {
+    const usedIds = new Set(result.map((item) => item.hash).filter(Boolean))
+
+    for (const element of session.elements) {
+      if (element.type !== 'face') continue
+
+      const id = String(element.attrs.id ?? '').trim()
+      if (!id || usedIds.has(id)) continue
+
+      // animated 表情一般为 gif，这里直接跳过，避免向 LLM 发送 gif
+      const animated = Boolean(element.attrs.animated)
+      if (animated) continue
+
+      try {
+        const emojiUrl = `https://cdn.discordapp.com/emojis/${id}.png?size=96&quality=lossless`
+        const resp = await ctx.http.get(emojiUrl, {
+          responseType: 'arraybuffer'
+        })
+
+        const buffer = Buffer.from(resp as ArrayBuffer)
+        const base64 = buffer.toString('base64')
+        const dataUrl = `data:image/png;base64,${base64}`
+
+        const rawName = (element.attrs.name as string | undefined) ?? ''
+        const name =
+          rawName && rawName !== '__'
+            ? rawName
+            : id || '表情'
+
+        const formatted = `[表情:${name}]`
+
+        result.push({
+          url: dataUrl,
+          hash: id,
+          formatted
+        })
+        usedIds.add(id)
+      } catch {
+        // 拉取表情失败时忽略该表情
+        continue
+      }
+    }
+  }
+
+  if (result.length < 1) {
     return undefined
   }
 
-  return images.map((image) => {
-    const url =
-      typeof image.image_url === 'string'
-        ? image.image_url
-        : image.image_url.url
-
-    const hash: string =
-      typeof image.image_url !== 'string' ? image.image_url['hash'] : ''
-
-    const formatted = hash ? `[image:${hash}]` : `<sticker>${url}</sticker>`
-
-    return { url, hash, formatted }
-  })
+  return result
 }
 
 type MessageCollectorFilter = (session: Session, message: Message) => boolean

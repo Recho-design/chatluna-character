@@ -1,8 +1,8 @@
 import { Context, h, Logger, Service, Session } from 'koishi';
 import { Config } from '..';
-import { Preset } from '../preset.js';
-import { GroupTemp, Message } from '../types.js';
-import { StickerService } from './sticker.js';
+import { Preset } from '../preset';
+import { GroupTemp, Message } from '../types';
+import { StickerService } from './sticker';
 export declare class MessageCollector extends Service {
     readonly ctx: Context;
     _config: Config;

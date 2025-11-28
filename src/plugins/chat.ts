@@ -182,27 +182,19 @@ async function prepareMessages(
     const tempMessages: BaseMessage[] = []
 
     if (config.image) {
-        for (const message of messages) {
-            if (message.images && message.images.length > 0) {
-                /*    for (const image of message.images) {
-                    const imageMessage = new HumanMessage(
-                        `[image:${image.hash}]`
-                    )
-                    imageMessage.additional_kwargs = {
-                        images: [image.url]
-                    }
+        const lastMessageWithImages = [...messages]
+            .reverse()
+            .find((message) => message.images && message.images.length > 0)
 
-                } */
+        if (lastMessageWithImages && lastMessageWithImages.images) {
+            const imageMessage = new HumanMessage({
+                content: lastMessageWithImages.images.flatMap((image) => [
+                    { type: 'text', text: image.formatted },
+                    { type: 'image_url', image_url: image.url }
+                ])
+            })
 
-                const imageMessage = new HumanMessage({
-                    content: message.images.flatMap((image) => [
-                        { type: 'text', text: image.formatted },
-                        { type: 'image_url', image_url: image.url }
-                    ])
-                })
-
-                tempMessages.push(imageMessage)
-            }
+            tempMessages.push(imageMessage)
         }
     }
 
@@ -233,6 +225,32 @@ async function getModelResponse(
 
             const systemMessage =
                 chain != null ? historyMessages.shift() : undefined
+
+            // 打印最终发送给 LLM 的完整提示词
+            if (chain) {
+                logger.debug(
+                    '[llmPrompt][toolCalling]: ' +
+                        JSON.stringify({
+                            // 只记录纯文本提示词，去掉图片等二进制内容
+                            instructions: systemMessage
+                                ? getMessageContent(systemMessage.content)
+                                : '',
+                            chat_history: historyMessages.map((message) => ({
+                                content: getMessageContent(message.content)
+                            })),
+                            input: getMessageContent(lastMessage.content)
+                        })
+                )
+            } else {
+                logger.debug(
+                    '[llmPrompt][normal]: ' +
+                        JSON.stringify(
+                            completionMessages.map((message) => ({
+                                content: getMessageContent(message.content)
+                            }))
+                        )
+                )
+            }
 
             const responseMessage = chain
                 ? await chain.invoke(
@@ -443,10 +461,37 @@ export async function apply(ctx: Context, config: Config) {
         )
 
         if (!chainPool[guildId]) {
-            logger.debug(
-                'completion message: ' +
-                    JSON.stringify(completionMessages.map((it) => it.content))
-            )
+            const systemMessage = completionMessages[0]
+            const lastMessage =
+                completionMessages[completionMessages.length - 1]
+            const middleMessages =
+                completionMessages.length > 2
+                    ? completionMessages.slice(1, -1)
+                    : []
+
+            // 系统消息（预设、人设、规则等）
+            if (systemMessage) {
+                logger.debug(
+                    '[completionMessages][system]: ' +
+                        JSON.stringify(systemMessage.content)
+                )
+            }
+
+            if (middleMessages.length > 0) {
+                const historyMessages = middleMessages.filter(
+                    (it) => !Array.isArray(it.content)
+                )
+                const imageMessages = middleMessages.filter((it) =>
+                    Array.isArray(it.content)
+                )
+
+                // 图片相关内容（有图片时才会出现）
+                if (imageMessages.length > 0) {
+                    logger.debug(
+                        '[completionMessages][images] '
+                    )
+                }
+            }
         }
 
         const response = await getModelResponse(
@@ -469,6 +514,26 @@ export async function apply(ctx: Context, config: Config) {
             service.mute(session, copyOfConfig.muteTime)
             service.releaseResponseLock(session)
             return
+        }
+
+        // 将 AI 回复中的思维链等敏感内容从历史中剔除
+        if (
+            copyOfConfig.historyStripPattern &&
+            typeof responseMessage.content === 'string'
+        ) {
+            try {
+                const historyStripRegExp = new RegExp(
+                    copyOfConfig.historyStripPattern,
+                    'gs'
+                )
+                responseMessage.content =
+                    responseMessage.content.replace(historyStripRegExp, '')
+            } catch (e) {
+                logger.warn(
+                    `invalid historyStripPattern: ${copyOfConfig.historyStripPattern}`,
+                    e
+                )
+            }
         }
 
         // 追加本轮对话的原始 user / assistant 消息

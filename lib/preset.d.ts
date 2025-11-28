@@ -1,5 +1,5 @@
 import { Context } from 'koishi';
-import { PresetTemplate } from './types.js';
+import { PresetTemplate } from './types';
 export declare class Preset {
     private readonly ctx;
     private readonly _presets;
