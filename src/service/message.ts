@@ -17,6 +17,10 @@ export class MessageCollector extends Service {
   // 标记每个群组是否已经有持久化的历史记录
   private _hasHistory: Record<string, boolean> = {}
 
+  private _lastModelStatus: Record<string, string> = {}
+
+  private _pendingInheritedStatus: Record<string, string> = {}
+
   private _eventEmitter = new EventEmitter()
 
   private _filters: MessageCollectorFilter[] = []
@@ -77,6 +81,20 @@ export class MessageCollector extends Service {
 
   getMessages(groupId: string) {
     return this._messages[groupId]
+  }
+
+  setLastModelStatus(groupId: string, status: string | undefined) {
+    const trimmed = status?.trim()
+    if (!trimmed) return
+    this._lastModelStatus[groupId] = trimmed
+  }
+
+  peekInheritedStatus(groupId: string) {
+    return this._pendingInheritedStatus[groupId]
+  }
+
+  consumeInheritedStatus(groupId: string) {
+    delete this._pendingInheritedStatus[groupId]
   }
 
   isMute(session: Session) {
@@ -173,6 +191,17 @@ export class MessageCollector extends Service {
 
   async clear(groupId?: string) {
     if (groupId) {
+      delete this._pendingInheritedStatus[groupId]
+
+      if (this._config.inheritMemory) {
+        const status = this._lastModelStatus[groupId]?.trim()
+        if (status) {
+          this._pendingInheritedStatus[groupId] = status
+        }
+      }
+
+      delete this._lastModelStatus[groupId]
+
       logger.debug(
         `开始清理群组 ${groupId} 的消息历史和上下文`
       )
@@ -192,6 +221,8 @@ export class MessageCollector extends Service {
       // 全量清理时，同步重置上下文和历史标记
       this._groupTemp = {}
       this._hasHistory = {}
+      this._lastModelStatus = {}
+      this._pendingInheritedStatus = {}
       await this.ctx.database.remove('chatluna_character.history', {})
       logger.debug('已完成清理所有群组的消息历史和上下文')
     }
@@ -279,10 +310,6 @@ export class MessageCollector extends Service {
 
     const config = this._getGroupConfig(groupId)
 
-    const images = config.image
-      ? await getImages(this.ctx, config.model, session)
-      : undefined
-
     const elements = session.elements
       ? session.elements
       : [h.text(session.content)]
@@ -316,7 +343,6 @@ export class MessageCollector extends Service {
           id: session.quote?.user?.id
         }
         : undefined,
-      images
     }
 
     groupArray.push(message)
@@ -325,7 +351,8 @@ export class MessageCollector extends Service {
       groupArray.shift()
     }
 
-    await this._processImages(groupArray, config)
+    // 按设计：历史仅保留文本上下文，不在内存/数据库里保留图片输入
+    this._stripAllImages(groupArray)
 
     this._messages[groupId] = groupArray
 
@@ -359,14 +386,36 @@ export class MessageCollector extends Service {
       this._hasHistory[groupId] = true
     }
 
+    let messagesForReply = groupArray
+    if (config.image) {
+      try {
+        const images = await getImages(this.ctx, config.model, session)
+        if (images && images.length > 0) {
+          messagesForReply = groupArray.map((msg) => ({ ...msg }))
+          const current = messagesForReply[messagesForReply.length - 1]
+          current.images = images
+          await this._limitImagesForMessage(current, config)
+        }
+      } catch (e) {
+        logger.warn('解析图片失败，已忽略本次图片输入：', e)
+      }
+    }
+
     this.setResponseLock(session)
-    this._eventEmitter.emit('collect', session, groupArray)
+    this._eventEmitter.emit('collect', session, messagesForReply)
     await this._unlock(session)
     return true
   }
 
-  private async _processImages(groupArray: Message[], config: Config) {
+  private _stripAllImages(groupArray: Message[]) {
+    for (const message of groupArray) {
+      if (message.images) delete message.images
+    }
+  }
+
+  private async _limitImagesForMessage(message: Message, config: Config) {
     if (!config.image) return
+    if (!message.images || message.images.length === 0) return
 
     const maxCount = config.imageInputMaxCount || 3
     const maxSize =
@@ -375,41 +424,27 @@ export class MessageCollector extends Service {
     let currentCount = 0
     let currentSize = 0
 
-    for (let i = groupArray.length - 1; i >= 0; i--) {
-      const message = groupArray[i]
-      if (!message.images || message.images.length === 0) continue
+    const validImages: Awaited<ReturnType<typeof getImages>> = []
 
-      const validImages: Awaited<ReturnType<typeof getImages>> = []
+    for (const image of message.images) {
+      const imageSize = await this._getImageSize(image.url)
 
-      for (const image of message.images) {
-        const imageSize = await this._getImageSize(image.url)
-
-        if (
-          currentCount < maxCount &&
-          currentSize + imageSize <= maxSize
-        ) {
-          validImages.push(image)
-          currentCount++
-          currentSize += imageSize
-        } else {
-          break
-        }
-      }
-
-      if (validImages.length === 0) {
-        delete message.images
+      if (
+        currentCount < maxCount &&
+        currentSize + imageSize <= maxSize
+      ) {
+        validImages.push(image)
+        currentCount++
+        currentSize += imageSize
       } else {
-        message.images = validImages
-      }
-
-      if (currentCount >= maxCount || currentSize >= maxSize) {
-        for (let j = i - 1; j >= 0; j--) {
-          if (groupArray[j].images) {
-            delete groupArray[j].images
-          }
-        }
         break
       }
+    }
+
+    if (validImages.length === 0) {
+      delete message.images
+    } else {
+      message.images = validImages
     }
   }
 
@@ -453,6 +488,11 @@ export class MessageCollector extends Service {
 
           while (groupArray.length > maxMessageSize) {
             groupArray.shift()
+          }
+
+          // 按设计：历史仅保留文本上下文，不保留图片/表情的识图输入
+          for (const message of groupArray) {
+            if (message.images) delete message.images
           }
 
           this._messages[row.groupId] = groupArray

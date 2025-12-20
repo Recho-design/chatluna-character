@@ -24,6 +24,7 @@ export interface Config extends ChatLunaPlugin.Config {
     messageActivityScoreLowerLimit: number;
     messageActivityScoreUpperLimit: number;
     maxTokens: number;
+    inheritMemory: boolean;
     applyGroup: string[];
     searchKeywordExtraModel: string;
     modelOverride: {

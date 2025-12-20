@@ -126,6 +126,7 @@ async function prepareMessages(
     currentPreset: PresetTemplate,
     temp: GroupTemp,
     stickerService: StickerService,
+    statusForPrompt: string,
     chain?: ChatLunaChain
 ): Promise<BaseMessage[]> {
     const [recentMessage, lastMessage] = await formatMessage(
@@ -140,7 +141,7 @@ async function prepareMessages(
         {
             time: '',
             stickers: JSON.stringify(stickerService.getAllStickTypes()),
-            status: ''
+            status: statusForPrompt
         },
         session.app.chatluna.promptRenderer,
         {
@@ -165,7 +166,7 @@ async function prepareMessages(
                     .replaceAll('}', '}}'),
                 time: formatTimestamp(new Date()),
                 stickers: JSON.stringify(stickerService.getAllStickTypes()),
-                status: temp.status ?? currentPreset.status ?? '',
+                status: statusForPrompt,
                 prompt: session.content,
                 built: {
                     preset: currentPreset.name,
@@ -449,6 +450,12 @@ export async function apply(ctx: Context, config: Config) {
         }
 
         const temp = await service.getTemp(session)
+        const inheritedStatus = copyOfConfig.inheritMemory
+            ? service.peekInheritedStatus(guildId)
+            : undefined
+        const statusForPrompt =
+            temp.status ?? inheritedStatus ?? currentPreset.status ?? ''
+        const usedInheritedStatus = Boolean(!temp.status && inheritedStatus)
         const completionMessages = await prepareMessages(
             messages,
             copyOfConfig,
@@ -457,6 +464,7 @@ export async function apply(ctx: Context, config: Config) {
             currentPreset,
             temp,
             stickerService,
+            statusForPrompt,
             chainPool[guildId]?.value
         )
 
@@ -508,6 +516,10 @@ export async function apply(ctx: Context, config: Config) {
         }
 
         const { responseMessage, parsedResponse } = response
+        service.setLastModelStatus(guildId, parsedResponse.status)
+        if (usedInheritedStatus) {
+            service.consumeInheritedStatus(guildId)
+        }
 
         temp.status = parsedResponse.status
         if (parsedResponse.elements.length < 1) {

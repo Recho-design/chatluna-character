@@ -8,6 +8,8 @@ export declare class MessageCollector extends Service {
     _config: Config;
     private _messages;
     private _hasHistory;
+    private _lastModelStatus;
+    private _pendingInheritedStatus;
     private _eventEmitter;
     private _filters;
     private _groupLocks;
@@ -20,6 +22,9 @@ export declare class MessageCollector extends Service {
     mute(session: Session, time: number): void;
     collect(func: (session: Session, messages: Message[]) => Promise<void>): void;
     getMessages(groupId: string): Message[];
+    setLastModelStatus(groupId: string, status: string | undefined): void;
+    peekInheritedStatus(groupId: string): string;
+    consumeInheritedStatus(groupId: string): void;
     isMute(session: Session): boolean;
     isResponseLocked(session: Session): boolean;
     setResponseLock(session: Session): void;
@@ -33,7 +38,8 @@ export declare class MessageCollector extends Service {
     clear(groupId?: string): Promise<void>;
     broadcastOnBot(session: Session, elements: h[] | h[][]): Promise<void>;
     broadcast(session: Session): Promise<boolean>;
-    private _processImages;
+    private _stripAllImages;
+    private _limitImagesForMessage;
     private _getImageSize;
     private _loadFromDatabase;
     private _saveGroupToDatabase;

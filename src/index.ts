@@ -52,7 +52,7 @@ export function apply(ctx: Context, config: Config) {
                                         message,
                                         {
                                             quote: false,
-                                            includeQuoteReply: true
+                                            includeQuoteReply: false
                                         }
                                     )
                                 }
@@ -124,6 +124,7 @@ export interface Config extends ChatLunaPlugin.Config {
     messageActivityScoreUpperLimit: number
 
     maxTokens: number
+    inheritMemory: boolean
     applyGroup: string[]
     searchKeywordExtraModel: string
 
@@ -207,6 +208,11 @@ export const Config = Schema.intersect([
             .description('最大的输入图片大小（MB）'),
         toolCalling: Schema.boolean()
             .description('是否启用工具调用功能')
+            .default(false),
+        inheritMemory: Schema.boolean()
+            .description(
+                '是否继承状态：清空聊天记录时暂存清空前最后一次的 <status> 内容，并在清空后的第一次请求里填充到 {status}'
+            )
             .default(false)
     }).description('模型配置'),
 
